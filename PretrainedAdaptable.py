@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from utils import *
 
+
 class VGG16(nn.Module):
     def __init__(self):
         super().__init__()
@@ -30,26 +31,24 @@ class VGG16(nn.Module):
         self.conv5_1 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.conv5_2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.conv5_3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.pool5 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(7, 7))
 
-        classifier = []
-        classifier.append(nn.Linear(7 * 7 * 512, 4096))
-        classifier.append(nn.ReLU(True))
-        classifier.append(nn.Dropout(0.5))
-        classifier.append(nn.Linear(4096, 4096))
-        classifier.append(nn.ReLU(True))
-        classifier.append(nn.Dropout(0.5))
-        classifier.append(nn.Linear(4096, 1000))
-
-        self.classifier = nn.Sequential(*classifier)
+        self.conv6 = nn.Conv2d(512, 4096, kernel_size=7, padding=3)
+        self.conv7 = nn.Conv2d(4096, 4096, kernel_size=1)
 
     def load_params(self):
         state_dict = self.state_dict()
         self_keys = list(state_dict.keys())
         for indx, key in enumerate(pretrained_model.state_dict().keys()):
+            if indx >= 26: break;
             state_dict[self_keys[indx]] = pretrained_model.state_dict()[key]
+
+        state_dict['conv6.weight'] = pretrained_model.state_dict()['classifier.0.weight'].view(4096, 512, 7, 7)
+        state_dict['conv6.bias'] = pretrained_model.state_dict()['classifier.0.bias'].view(4096)
+
+        state_dict['conv7.weight'] = pretrained_model.state_dict()['classifier.3.weight'].view(4096, 4096, 1, 1)
+        state_dict['conv7.bias'] = pretrained_model.state_dict()['classifier.3.bias'].view(4096)
         self.load_state_dict(state_dict)
 
     def forward(self, image):
@@ -68,14 +67,15 @@ class VGG16(nn.Module):
 
         x = F.relu(self.conv4_1(x))
         x = F.relu(self.conv4_2(x))
-        conv4_3 = F.relu(self.conv4_3(x))
-        x = self.pool4(conv4_3)
+        x = F.relu(self.conv4_3(x))
+        conv4_3 = x
+        x = self.pool4(x)
 
         x = F.relu(self.conv5_1(x))
         x = F.relu(self.conv5_2(x))
-        conv5_3 = F.relu(self.conv5_3(x))
-        x = self.pool5(conv5_3)
+        x = F.relu(self.conv5_3(x))
 
-        x = self.avgpool(x)
-        x = self.classifier(x.view(-1, 512 * 7 * 7))
-        return x, conv4_3, conv5_3
+        x = F.relu(self.conv6(x))
+        x = F.relu(self.conv7(x))
+        conv7 = x
+        return conv4_3, conv7
