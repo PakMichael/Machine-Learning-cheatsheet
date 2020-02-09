@@ -3,16 +3,14 @@ from Appendage import Appendage
 from Locator import Locator
 from VOCdataset import VOCdataset
 from utils import *
-import torchvision.transforms.functional as F
-import torch
+
 
 train = VOCdataset('VOC2012')
 validation = VOCdataset('VOC2007')
 
-show_item(train[15])
-image=train[15]['image']
-F.resize(image, (224,224))
-old_dims = torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0)
+image, objects = train[5]
+
+
 # for index, val in enumerate(train):
 #     if index > 2: break
 #     show_item(val)

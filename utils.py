@@ -31,9 +31,9 @@ def show_item(item):
     fig, ax = plt.subplots(1)
     ax.imshow(item['image'])
     for obj in item['objects']:
-        width = obj['xmax'] - obj['xmin']
-        height = obj['ymax'] - obj['ymin']
-        rect = patches.Rectangle((obj['xmin'], obj['ymin']), width, height,
+        width = (obj['xmax'] - obj['xmin'])*item['image'].width
+        height = (obj['ymax'] - obj['ymin'])*item['image'].height
+        rect = patches.Rectangle((obj['xmin']*item['image'].width, obj['ymin']*item['image'].height), width, height,
                                  linewidth=1, edgecolor='r', facecolor='none')
         ax.add_patch(rect)
         plt.text(obj['xmin'], obj['ymin'], obj['name'])
