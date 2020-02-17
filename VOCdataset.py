@@ -27,8 +27,8 @@ def makeItemFromAnnotation(annotation, path):
         if child.tag == 'object':
             img_obj = {}
             for object in child:
-                if object.tag == 'name':
-                    img_obj.update({object.tag: object.text})
+                # if object.tag == 'name':
+                # img_obj.update({object.tag: object.text})
                 if object.tag == 'bndbox':
                     for bndbox in object:
                         img_obj.update({bndbox.tag: int(bndbox.text)})
@@ -44,24 +44,30 @@ def scale_down(item, scale=(224, 224)):
     image = item['image']
     old_dims = torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0)
 
-    new_img = F.resize(image, (224, 224))
+    new_img = F.resize(image, (28, 28))
     new_dims = torch.FloatTensor([new_img.width, new_img.height, new_img.width, new_img.height]).unsqueeze(0)
 
     scale = new_dims / old_dims
 
-    new_obs = []
+    all_objects = []
     for obj in item['objects']:
-        scaled_obj = obj
-        scaled_obj['xmin'] *= scale[0][0].item() / new_img.width
-        scaled_obj['ymin'] *= scale[0][1].item() / new_img.height
-        scaled_obj['xmax'] *= scale[0][2].item() / new_img.width
-        scaled_obj['ymax'] *= scale[0][3].item() / new_img.height
-        new_obs += [scaled_obj]
+        single_object = [obj['xmin'], obj['ymin'], obj['xmax'], obj['ymax']]
+
+        single_object[0] *= scale[0][0].item() / new_img.width #xmin
+        single_object[1] *= scale[0][1].item() / new_img.height #ymin
+
+        single_object[2] =  single_object[2] * scale[0][2].item() / new_img.width -  single_object[0] #width
+        single_object[3] = single_object[3] * scale[0][3].item() / new_img.height - single_object[1] #height
+
+        single_object[0]+=single_object[2]/ 2 #cx
+        single_object[1]+=single_object[3]/ 2 #cy
+
+        all_objects+=[single_object]
 
     new_image = F.to_tensor(new_img)
-    new_image = F.normalize(new_image, mean=mean, std=std)
+    # new_image = F.normalize(new_image, mean=mean, std=std)
 
-    return new_image, new_obs
+    return new_image, all_objects
 
 
 class VOCdataset(torch.utils.data.Dataset):

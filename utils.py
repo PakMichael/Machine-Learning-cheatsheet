@@ -5,6 +5,7 @@ from torchvision import models, transforms
 import json
 from torch import mean
 
+
 def getLabels():
     with open('./labels.json', encoding='latin-1') as json_file:
         data = json.load(json_file)
@@ -23,23 +24,37 @@ pretrained_keys = list(pretrained_model.state_dict().keys())
 def getImage(path):
     return Image.open(path)
 
+
 def showImage(img):
     plt.figure()
     plt.imshow(img)
+
 
 def show_item(item):
     fig, ax = plt.subplots(1)
     ax.imshow(item['image'])
     for obj in item['objects']:
-        width = (obj['xmax'] - obj['xmin'])*item['image'].width
-        height = (obj['ymax'] - obj['ymin'])*item['image'].height
-        rect = patches.Rectangle((obj['xmin']*item['image'].width, obj['ymin']*item['image'].height), width, height,
+        width = (obj['xmax'] - obj['xmin']) * item['image'].width
+        height = (obj['ymax'] - obj['ymin']) * item['image'].height
+        rect = patches.Rectangle((obj['xmin'] * item['image'].width, obj['ymin'] * item['image'].height), width, height,
                                  linewidth=1, edgecolor='r', facecolor='none')
         ax.add_patch(rect)
         plt.text(obj['xmin'], obj['ymin'], obj['name'])
 
-
     plt.show()
+
+
+def show_img_obj_scaled(img, objs):
+    fig, ax = plt.subplots(1)
+    ax.imshow(img)
+    for obj in objs:
+        x = (obj[0] - obj[2] / 2) * img.width
+        y = (obj[1] - obj[3] / 2) * img.height
+        rect = patches.Rectangle((x, y), obj[2] * img.width, obj[3] * img.height,
+                                 linewidth=1, edgecolor='r', facecolor='none')
+        ax.add_patch(rect)
+    plt.show()
+
 
 def showActivations(featureMap, img):
     activations = featureMap.squeeze(0)
