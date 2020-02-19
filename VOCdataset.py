@@ -44,7 +44,7 @@ def scale_down(item, scale=(224, 224)):
     image = item['image']
     old_dims = torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0)
 
-    new_img = F.resize(image, (28, 28))
+    new_img = F.resize(image, (224, 224))
     new_dims = torch.FloatTensor([new_img.width, new_img.height, new_img.width, new_img.height]).unsqueeze(0)
 
     scale = new_dims / old_dims
