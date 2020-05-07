@@ -4,7 +4,7 @@ from PIL import Image
 from torchvision import models, transforms
 import json
 from torch import mean
-
+import torch
 
 def getLabels():
     with open('./labels.json', encoding='latin-1') as json_file:
@@ -62,3 +62,61 @@ def showActivations(featureMap, img):
     plt.imshow(mean(activations, dim=0).detach().numpy(),
                extent=[0, img.width, img.height, 0])  # extent=[(left, right, bottom, top)]
     plt.imshow(img, alpha=0.2)
+
+
+class AverageMeter(object):
+    """
+    Keeps track of most recent, average, sum, and count of a metric.
+    """
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
+def clip_gradient(optimizer, grad_clip):
+    """
+    Clips gradients computed during backpropagation to avoid explosion of gradients.
+
+    :param optimizer: optimizer with the gradients to be clipped
+    :param grad_clip: clip value
+    """
+    for group in optimizer.param_groups:
+        for param in group['params']:
+            if param.grad is not None:
+                param.grad.data.clamp_(-grad_clip, grad_clip)
+
+
+def save_checkpoint(epoch, epochs_since_improvement, model, optimizer, loss, best_loss, is_best):
+    """
+    Save model checkpoint.
+
+    :param epoch: epoch number
+    :param epochs_since_improvement: number of epochs since last improvement
+    :param model: model
+    :param optimizer: optimizer
+    :param loss: validation loss in this epoch
+    :param best_loss: best validation loss achieved so far (not necessarily in this checkpoint)
+    :param is_best: is this checkpoint the best so far?
+    """
+    state = {'epoch': epoch,
+             'epochs_since_improvement': epochs_since_improvement,
+             'loss': loss,
+             'best_loss': best_loss,
+             'model': model,
+             'optimizer': optimizer}
+    filename = 'checkpoint_ssd300.pth.tar'
+    torch.save(state, filename)
+    # If this checkpoint is the best so far, store a copy so it doesn't get overwritten by a worse checkpoint
+    if is_best:
+        torch.save(state, 'BEST_' + filename)

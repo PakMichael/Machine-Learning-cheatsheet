@@ -21,6 +21,8 @@ def find_jaccard_overlap(set_1, set_2):
 
     return intersection / union  # (n1, n2)
 
+def cx_to_xmin(tens):
+    return [tens[0]-tens[2]/2.0,tens[1]-tens[3]/2.0,tens[0]+tens[2]/2.0,tens[1]+tens[3]/2.0]
 
 fmap_dims = {'conv4_3': 28,
              'conv7': 14,
@@ -52,7 +54,7 @@ for k, fmap in enumerate(fmaps):
             cy = (i + 0.5) / fmap_dims[fmap]
 
             for ratio in aspect_ratios[fmap]:
-                prior_boxes.append([cx, cy, obj_scales[fmap] * sqrt(ratio), obj_scales[fmap] / sqrt(ratio)])
+                prior_boxes.append(cx_to_xmin([cx, cy, obj_scales[fmap] * sqrt(ratio), obj_scales[fmap] / sqrt(ratio)]))
 
 prior_boxes = torch.FloatTensor(prior_boxes)  # (8732, 4)
 prior_boxes.clamp_(0, 1)  # (8732, 4)

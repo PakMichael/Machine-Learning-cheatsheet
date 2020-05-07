@@ -3,7 +3,7 @@ import glob
 import xml.etree.ElementTree as ET
 import torchvision.transforms.functional as F
 
-fullPath = "D:\\Downloads\\pascal-voc\\pascal-voc\\"
+fullPath = "C:\\Users\Weegree\\Downloads\\pascal-voc\\pascal-voc\\"
 from utils import *
 
 
@@ -37,6 +37,11 @@ def makeItemFromAnnotation(annotation, path):
     return item
 
 
+def cx_to_xmin(tens):
+    return torch.Tensor(
+        [[tens[0] - tens[2] / 2.0, tens[1] - tens[3] / 2.0, tens[0] + tens[2] / 2.0, tens[1] + tens[3] / 2.0]])
+
+
 def scale_down(item, scale=(224, 224)):
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
@@ -49,20 +54,19 @@ def scale_down(item, scale=(224, 224)):
 
     scale = new_dims / old_dims
 
-    all_objects = []
+    all_objects = torch.Tensor()
     for obj in item['objects']:
         single_object = [obj['xmin'], obj['ymin'], obj['xmax'], obj['ymax']]
 
-        single_object[0] *= scale[0][0].item() / new_img.width #xmin
-        single_object[1] *= scale[0][1].item() / new_img.height #ymin
+        single_object[0] *= scale[0][0].item() / new_img.width  # xmin
+        single_object[1] *= scale[0][1].item() / new_img.height  # ymin
 
-        single_object[2] =  single_object[2] * scale[0][2].item() / new_img.width -  single_object[0] #width
-        single_object[3] = single_object[3] * scale[0][3].item() / new_img.height - single_object[1] #height
+        single_object[2] = single_object[2] * scale[0][2].item() / new_img.width - single_object[0]  # width
+        single_object[3] = single_object[3] * scale[0][3].item() / new_img.height - single_object[1]  # height
 
-        single_object[0]+=single_object[2]/ 2 #cx
-        single_object[1]+=single_object[3]/ 2 #cy
-
-        all_objects+=[single_object]
+        single_object[0] += single_object[2] / 2  # cx
+        single_object[1] += single_object[3] / 2  # cy
+        all_objects = torch.cat((all_objects, cx_to_xmin(single_object)), 0)
 
     new_image = F.to_tensor(new_img)
     # new_image = F.normalize(new_image, mean=mean, std=std)
@@ -88,3 +92,15 @@ class VOCdataset(torch.utils.data.Dataset):
         image, objects = scale_down(item)
 
         return image, objects
+
+    def collate_fn(self, batch):
+        images = list()
+        boxes = list()
+
+        for b in batch:
+            images.append(b[0])
+            boxes.append(b[1])
+
+        images = torch.stack(images, dim=0)
+
+        return images, boxes  # tensor (N, 3, 300, 300), 3 lists of N tensors each
